@@ -401,17 +401,39 @@
             answers = {};
             correctAnswers = {};
             
+            // Detect format based on headers
+            const isNewFormat = headers[0].includes('题号') || headers[0].includes('题号');
+            
             for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue; // Skip empty lines
+                if (!lines[i].trim()) continue;
                 const values = parseCSVLine(lines[i]);
-                if (values.length >= 7) {
+                
+                if (isNewFormat && values.length >= 9) {
+                    // New format: 题号,题型,题目,选项A,选项B,选项C,选项D,选项E,答案
                     const q = {
                         number: values[0],
+                        type: values[1],
+                        question: values[2],
+                        A: values[3],
+                        B: values[4],
+                        C: values[5],
+                        D: values[6],
+                        E: values[7],
+                        answer: values[8] ? values[8].trim() : ''
+                    };
+                    questions.push(q);
+                    correctAnswers[q.number] = q.answer;
+                } else if (values.length >= 7) {
+                    // Old format: 題號,題目,選項A,選項B,選項C,選項D,答案
+                    const q = {
+                        number: values[0],
+                        type: '单项选择题',
                         question: values[1],
                         A: values[2],
                         B: values[3],
                         C: values[4],
                         D: values[5],
+                        E: '',
                         answer: values[6].trim()
                     };
                     questions.push(q);
@@ -447,25 +469,58 @@
             currentIndex = index;
             const q = questions[index];
             
-            questionNumber.textContent = `題 ${q.number}`;
+            // Show question type
+            const typeText = q.type || '單項選擇題';
+            questionNumber.textContent = `題 ${q.number} (${typeText})`;
             questionText.textContent = q.question;
             
-            const opts = [
-                { key: 'A', text: q.A },
-                { key: 'B', text: q.B },
-                { key: 'C', text: q.C },
-                { key: 'D', text: q.D }
-            ];
+            // Build options based on question type
+            let opts = [];
+            
+            if (typeText.includes('判斷') || typeText.includes('判断')) {
+                // True/False question
+                opts = [
+                    { key: '對', text: '對' },
+                    { key: '錯', text: '錯' }
+                ];
+            } else if (typeText.includes('多選') || typeText.includes('多选')) {
+                // Multiple choice - show A-E
+                opts = [];
+                if (q.A) opts.push({ key: 'A', text: q.A });
+                if (q.B) opts.push({ key: 'B', text: q.B });
+                if (q.C) opts.push({ key: 'C', text: q.C });
+                if (q.D) opts.push({ key: 'D', text: q.D });
+                if (q.E) opts.push({ key: 'E', text: q.E });
+            } else {
+                // Single choice - show A-D
+                opts = [
+                    { key: 'A', text: q.A },
+                    { key: 'B', text: q.B },
+                    { key: 'C', text: q.C },
+                    { key: 'D', text: q.D }
+                ];
+            }
             
             optionsDiv.innerHTML = '';
             opts.forEach(opt => {
                 const div = document.createElement('div');
                 div.className = 'option';
-                if (answers[q.number] === opt.key) {
-                    div.classList.add('selected');
+                
+                // Check if this option is selected
+                const currentAnswer = answers[q.number] || '';
+                if (typeText.includes('多選') || typeText.includes('多选')) {
+                    // For multiple choice, check if key is in answer
+                    if (currentAnswer.includes(opt.key)) {
+                        div.classList.add('selected');
+                    }
+                } else {
+                    if (currentAnswer === opt.key) {
+                        div.classList.add('selected');
+                    }
                 }
+                
                 div.innerHTML = `<span class="option-label">${opt.key}.</span>${opt.text}`;
-                div.onclick = () => selectOption(opt.key);
+                div.onclick = () => selectOption(opt.key, typeText);
                 optionsDiv.appendChild(div);
             });
             
@@ -488,16 +543,41 @@
         }
         
         // Select option
-        function selectOption(key) {
+        function selectOption(key, typeText) {
             const q = questions[currentIndex];
-            answers[q.number] = key;
+            const isMultiple = typeText.includes('多選') || typeText.includes('多选');
+            
+            if (isMultiple) {
+                // Toggle option for multiple choice
+                const current = answers[q.number] || '';
+                if (current.includes(key)) {
+                    // Remove key
+                    answers[q.number] = current.replace(key, '').replace(/^^/, '').replace(/$$/, '').trim();
+                } else {
+                    // Add key (sort alphabetically)
+                    const arr = (current + key).split('').sort().join('');
+                    answers[q.number] = arr;
+                }
+            } else {
+                answers[q.number] = key;
+            }
             
             // Update UI
             const opts = optionsDiv.querySelectorAll('.option');
+            const currentAnswer = answers[q.number] || '';
+            
             opts.forEach(opt => {
                 opt.classList.remove('selected', 'correct', 'wrong');
-                if (opt.querySelector('.option-label').textContent === key + '.') {
-                    opt.classList.add('selected');
+                const label = opt.querySelector('.option-label').textContent.replace('.', '');
+                
+                if (isMultiple) {
+                    if (currentAnswer.includes(label)) {
+                        opt.classList.add('selected');
+                    }
+                } else {
+                    if (currentAnswer === label) {
+                        opt.classList.add('selected');
+                    }
                 }
             });
             
@@ -514,7 +594,9 @@
         function updateScore() {
             let correct = 0;
             Object.keys(answers).forEach(num => {
-                if (answers[num] === correctAnswers[num]) {
+                const userAnswer = (answers[num] || '').split('').sort().join('');
+                const correctAnswer = (correctAnswers[num] || '').split('').sort().join('');
+                if (userAnswer === correctAnswer) {
                     correct++;
                 }
             });
@@ -554,7 +636,9 @@
         function showResults() {
             let correct = 0;
             Object.keys(answers).forEach(num => {
-                if (answers[num] === correctAnswers[num]) {
+                const userAnswer = (answers[num] || '').split('').sort().join('');
+                const correctAnswer = (correctAnswers[num] || '').split('').sort().join('');
+                if (userAnswer === correctAnswer) {
                     correct++;
                 }
             });
