@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC 考試系統</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #555;
+            margin-bottom: 15px;
+        }
+        
+        /* File Selection */
+        .file-list {
+            list-style: none;
+        }
+        
+        .file-item {
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .file-item:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        /* Exam Mode */
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .question-number {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .question-score {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .question-text {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .option {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+        
+        .option:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .option.selected {
+            border-color: #667eea;
+            background: #e8edff;
+        }
+        
+        .option.correct {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .option.wrong {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .option-label {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #667eea;
+        }
+        
+        /* Navigation */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            gap: 10px;
+        }
+        
+        .nav-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn:hover {
+            background: #5a6fd6;
+        }
+        
+        .nav-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .nav-btn.secondary {
+            background: #6c757d;
+        }
+        
+        .nav-btn.secondary:hover {
+            background: #5a6268;
+        }
+        
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 20px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* Results */
+        .results {
+            text-align: center;
+        }
+        
+        .score-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .score-details {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .restart-btn {
+            padding: 15px 40px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        
+        .restart-btn:hover {
+            background: #5a6fd6;
+        }
+        
+        /* Hidden */
+        .hidden {
+            display: none;
+        }
+        
+        /* Question Navigator */
+        .question-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .nav-dot {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            background: #f8f9fa;
+            transition: all 0.3s;
+        }
+        
+        .nav-dot:hover {
+            background: #e9ecef;
+        }
+        
+        .nav-dot.current {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav-dot.answered {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .nav-dot.wrong-answer {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- File Selection Screen -->
+        <div id="fileScreen" class="card">
+            <h1>📚 MC 考試系統</h1>
+            <h2>選擇試卷：</h2>
+            <ul id="fileList" class="file-list"></ul>
+        </div>
+        
+        <!-- Exam Screen -->
+        <div id="examScreen" class="card hidden">
+            <div class="question-header">
+                <span id="questionNumber" class="question-number">題 1</span>
+                <span id="questionScore" class="question-score">得分: 0</span>
+            </div>
+            
+            <div id="questionText" class="question-text"></div>
+            
+            <div id="options" class="options"></div>
+            
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                </div>
+                <div id="progressText" class="progress-text">0 / 0 題</div>
+            </div>
+            
+            <div class="nav-buttons">
+                <button id="prevBtn" class="nav-btn">◀ 上一題</button>
+                <button id="submitBtn" class="nav-btn secondary hidden">提交試卷</button>
+                <button id="nextBtn" class="nav-btn">下一題 ▶</button>
+            </div>
+            
+            <div id="questionNav" class="question-nav"></div>
+        </div>
+        
+        <!-- Results Screen -->
+        <div id="resultScreen" class="card hidden">
+            <div class="results">
+                <h1>考試完成！</h1>
+                <div id="scoreDisplay" class="score-display">0%</div>
+                <div id="scoreDetails" class="score-details"></div>
+                <button id="restartBtn" class="restart-btn">重新考試</button>
+                <button id="changeFileBtn" class="restart-btn" style="background: #6c757d; margin-left: 10px;">更換試卷</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let questions = [];
+        let currentIndex = 0;
+        let answers = {};
+        let correctAnswers = {};
+        
+        // DOM Elements
+        const fileScreen = document.getElementById('fileScreen');
+        const examScreen = document.getElementById('examScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const fileList = document.getElementById('fileList');
+        const questionNumber = document.getElementById('questionNumber');
+        const questionScore = document.getElementById('questionScore');
+        const questionText = document.getElementById('questionText');
+        const optionsDiv = document.getElementById('options');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const questionNav = document.getElementById('questionNav');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const scoreDetails = document.getElementById('scoreDetails');
+        const restartBtn = document.getElementById('restartBtn');
+        const changeFileBtn = document.getElementById('changeFileBtn');
+        
+        // Load CSV files list
+        async function loadCSVFiles() {
+            try {
+                const response = await fetch('filelist.json');
+                const files = await response.json();
+                
+                if (files.length === 0) {
+                    fileList.innerHTML = '<li class="file-item">沒有找到試卷檔案</li>';
+                    return;
+                }
+                
+                files.forEach(file => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.textContent = file.replace('.csv', '');
+                    li.onclick = () => loadCSV(file);
+                    fileList.appendChild(li);
+                });
+            } catch (error) {
+                // If filelist.json doesn't exist, try to scan CSV files
+                // For now, show a message
+                fileList.innerHTML = '<li class="file-item" onclick="alert(\'請先上傳 CSV 檔案到這個資料夾\')">點擊上傳試卷</li>';
+            }
+        }
+        
+        // Load CSV file
+        async function loadCSV(filename) {
+            try {
+                const response = await fetch(filename);
+                const text = await response.text();
+                parseCSV(text);
+                fileScreen.classList.add('hidden');
+                examScreen.classList.remove('hidden');
+                showQuestion(0);
+                createNavDots();
+            } catch (error) {
+                alert('無法載入檔案: ' + error.message);
+            }
+        }
+        
+        // Parse CSV
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',');
+            
+            questions = [];
+            answers = {};
+            correctAnswers = {};
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length >= 7) {
+                    const q = {
+                        number: values[0],
+                        question: values[1],
+                        A: values[2],
+                        B: values[3],
+                        C: values[4],
+                        D: values[5],
+                        answer: values[6].trim()
+                    };
+                    questions.push(q);
+                    correctAnswers[q.number] = q.answer;
+                }
+            }
+        }
+        
+        // Parse CSV line (handle quoted values)
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let char of line) {
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+        
+        // Show question
+        function showQuestion(index) {
+            if (index < 0 || index >= questions.length) return;
+            
+            currentIndex = index;
+            const q = questions[index];
+            
+            questionNumber.textContent = `題 ${q.number}`;
+            questionText.textContent = q.question;
+            
+            const opts = [
+                { key: 'A', text: q.A },
+                { key: 'B', text: q.B },
+                { key: 'C', text: q.C },
+                { key: 'D', text: q.D }
+            ];
+            
+            optionsDiv.innerHTML = '';
+            opts.forEach(opt => {
+                const div = document.createElement('div');
+                div.className = 'option';
+                if (answers[q.number] === opt.key) {
+                    div.classList.add('selected');
+                }
+                div.innerHTML = `<span class="option-label">${opt.key}.</span>${opt.text}`;
+                div.onclick = () => selectOption(opt.key);
+                optionsDiv.appendChild(div);
+            });
+            
+            // Update progress
+            const answered = Object.keys(answers).length;
+            progressFill.style.width = `${(answered / questions.length) * 100}%`;
+            progressText.textContent = `${answered} / ${questions.length} 題`;
+            
+            // Update buttons
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.textContent = currentIndex === questions.length - 1 ? '最後一題 ▶' : '下一題 ▶';
+            
+            // Show submit button on last question
+            if (currentIndex === questions.length - 1 && Object.keys(answers).length === questions.length) {
+                submitBtn.classList.remove('hidden');
+            }
+            
+            updateNavDots();
+            updateScore();
+        }
+        
+        // Select option
+        function selectOption(key) {
+            const q = questions[currentIndex];
+            answers[q.number] = key;
+            
+            // Update UI
+            const opts = optionsDiv.querySelectorAll('.option');
+            opts.forEach(opt => {
+                opt.classList.remove('selected', 'correct', 'wrong');
+                if (opt.querySelector('.option-label').textContent === key + '.') {
+                    opt.classList.add('selected');
+                }
+            });
+            
+            updateNavDots();
+            updateScore();
+            
+            // Show submit on last question
+            if (currentIndex === questions.length - 1 && Object.keys(answers).length === questions.length) {
+                submitBtn.classList.remove('hidden');
+            }
+        }
+        
+        // Update score
+        function updateScore() {
+            let correct = 0;
+            Object.keys(answers).forEach(num => {
+                if (answers[num] === correctAnswers[num]) {
+                    correct++;
+                }
+            });
+            questionScore.textContent = `得分: ${correct}`;
+        }
+        
+        // Create navigation dots
+        function createNavDots() {
+            questionNav.innerHTML = '';
+            questions.forEach((q, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'nav-dot';
+                dot.textContent = q.number;
+                dot.onclick = () => showQuestion(index);
+                questionNav.appendChild(dot);
+            });
+        }
+        
+        // Update navigation dots
+        function updateNavDots() {
+            const dots = questionNav.querySelectorAll('.nav-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.remove('current', 'answered', 'wrong-answer');
+                if (index === currentIndex) {
+                    dot.classList.add('current');
+                } else if (answers[questions[index].number]) {
+                    if (answers[questions[index].number] === correctAnswers[questions[index].number]) {
+                        dot.classList.add('answered');
+                    } else {
+                        dot.classList.add('wrong-answer');
+                    }
+                }
+            });
+        }
+        
+        // Show results
+        function showResults() {
+            let correct = 0;
+            Object.keys(answers).forEach(num => {
+                if (answers[num] === correctAnswers[num]) {
+                    correct++;
+                }
+            });
+            
+            const percentage = Math.round((correct / questions.length) * 100);
+            scoreDisplay.textContent = `${percentage}%`;
+            scoreDetails.textContent = `正確: ${correct} / ${questions.length} 題`;
+            
+            examScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+        }
+        
+        // Event listeners
+        prevBtn.onclick = () => showQuestion(currentIndex - 1);
+        nextBtn.onclick = () => showQuestion(currentIndex + 1);
+        
+        submitBtn.onclick = () => {
+            if (Object.keys(answers).length < questions.length) {
+                if (!confirm(`你只完成 ${Object.keys(answers).length} / ${questions.length} 題，確定要提交嗎？`)) {
+                    return;
+                }
+            }
+            showResults();
+        };
+        
+        restartBtn.onclick = () => {
+            answers = {};
+            currentIndex = 0;
+            resultScreen.classList.add('hidden');
+            examScreen.classList.remove('hidden');
+            showQuestion(0);
+            updateNavDots();
+        };
+        
+        changeFileBtn.onclick = () => {
+            answers = {};
+            currentIndex = 0;
+            resultScreen.classList.add('hidden');
+            examScreen.classList.add('hidden');
+            fileScreen.classList.remove('hidden');
+            loadCSVFiles();
+        };
+        
+        // Initialize
+        loadCSVFiles();
+    </script>
+</body>
+</html>
