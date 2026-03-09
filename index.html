@@ -402,6 +402,7 @@
             correctAnswers = {};
             
             for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue; // Skip empty lines
                 const values = parseCSVLine(lines[i]);
                 if (values.length >= 7) {
                     const q = {
