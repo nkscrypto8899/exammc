@@ -452,14 +452,61 @@
         }
         
         // Load CSV file
+        let currentFilename = '';
+        
+        // LocalStorage keys
+        function getStorageKey(filename) {
+            return 'exammc_progress_' + filename;
+        }
+        
+        // Save progress
+        function saveProgress() {
+            if (!currentFilename) return;
+            const data = {
+                currentIndex: currentIndex,
+                answers: answers,
+                questionCount: questions.length
+            };
+            localStorage.setItem(getStorageKey(currentFilename), JSON.stringify(data));
+        }
+        
+        // Load progress
+        function loadProgress(filename) {
+            const saved = localStorage.getItem(getStorageKey(filename));
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return null;
+        }
+        
+        // Clear progress
+        function clearProgress() {
+            if (!currentFilename) return;
+            localStorage.removeItem(getStorageKey(currentFilename));
+        }
+        
         async function loadCSV(filename) {
             try {
+                currentFilename = filename;
                 const response = await fetch('https://raw.githubusercontent.com/nkscrypto8899/exammc/main/' + filename);
                 const text = await response.text();
                 parseCSV(text);
+                
+                // Check for saved progress
+                const saved = loadProgress(filename);
+                if (saved && saved.questionCount === questions.length && Object.keys(saved.answers).length > 0) {
+                    const continueLast = confirm(`搵到上次進度：你做到第 ${saved.currentIndex + 1} 題，有 ${Object.keys(saved.answers).length} 題已答。要繼續嗎？\n\n[取消] = 重新開始`);
+                    if (continueLast) {
+                        currentIndex = saved.currentIndex;
+                        answers = saved.answers;
+                    } else {
+                        clearProgress();
+                    }
+                }
+                
                 fileScreen.classList.add('hidden');
                 examScreen.classList.remove('hidden');
-                showQuestion(0);
+                showQuestion(currentIndex);
                 createNavDots();
             } catch (error) {
                 alert('無法載入檔案: ' + error.message);
@@ -615,6 +662,7 @@
             updateNavDots();
             updateScore();
             scrollToCurrentDot();
+            saveProgress();
         }
         
         // Select option
@@ -658,6 +706,7 @@
             
             updateNavDots();
             updateScore();
+            saveProgress();
             
             // Show submit on last question
             if (currentIndex === questions.length - 1 && Object.keys(answers).length === questions.length) {
@@ -751,6 +800,7 @@
             
             examScreen.classList.add('hidden');
             resultScreen.classList.remove('hidden');
+            clearProgress();
         }
         
         // Event listeners
