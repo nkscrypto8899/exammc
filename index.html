@@ -234,14 +234,61 @@
             display: none;
         }
         
-        /* Question Navigator */
-        .question-nav {
+        /* Question Navigator - Floating Panel */
+        .question-nav-wrapper {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        
+        .question-nav-toggle {
             display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .question-nav-toggle:hover {
+            background: #5a6fd6;
+        }
+        
+        .question-nav-toggle .arrow {
+            transition: transform 0.3s;
+        }
+        
+        .question-nav-toggle.expanded .arrow {
+            transform: rotate(180deg);
+        }
+        
+        .question-nav {
+            display: none;
             flex-wrap: wrap;
             gap: 8px;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 15px;
+            background: white;
+            border-top: 2px solid #667eea;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .question-nav.show {
+            display: flex;
+        }
+        
+        .question-nav-padding {
+            height: 50px;
         }
         
         .nav-dot {
@@ -310,7 +357,14 @@
                 <button id="nextBtn" class="nav-btn">下一題 ▶</button>
             </div>
             
-            <div id="questionNav" class="question-nav"></div>
+            <div class="question-nav-padding"></div>
+            
+            <div class="question-nav-wrapper">
+                <button id="navToggle" class="question-nav-toggle">
+                    <span class="arrow">▲</span> 題目列表 <span id="navStats"></span>
+                </button>
+                <div id="questionNav" class="question-nav"></div>
+            </div>
         </div>
         
         <!-- Results Screen -->
@@ -347,6 +401,8 @@
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
         const questionNav = document.getElementById('questionNav');
+        const navToggle = document.getElementById('navToggle');
+        const navStats = document.getElementById('navStats');
         const scoreDisplay = document.getElementById('scoreDisplay');
         const scoreDetails = document.getElementById('scoreDetails');
         const restartBtn = document.getElementById('restartBtn');
@@ -622,6 +678,7 @@
         // Update navigation dots
         function updateNavDots() {
             const dots = questionNav.querySelectorAll('.nav-dot');
+            let correct = 0, wrong = 0;
             dots.forEach((dot, index) => {
                 dot.classList.remove('current', 'answered', 'wrong-answer');
                 if (index === currentIndex) {
@@ -629,12 +686,23 @@
                 } else if (answers[questions[index].number]) {
                     if (answers[questions[index].number] === correctAnswers[questions[index].number]) {
                         dot.classList.add('answered');
+                        correct++;
                     } else {
                         dot.classList.add('wrong-answer');
+                        wrong++;
                     }
                 }
             });
+            // Update stats
+            const answered = Object.keys(answers).length;
+            navStats.textContent = `(${answered}/${questions.length})`;
         }
+        
+        // Toggle question nav panel
+        navToggle.addEventListener('click', () => {
+            questionNav.classList.toggle('show');
+            navToggle.classList.toggle('expanded');
+        });
         
         // Show results
         function showResults() {
